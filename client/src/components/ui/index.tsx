@@ -6,3 +6,5 @@ export * from './dropdown-menu';
 export * from './calendar';
 export * from './select';
 export * from './badge';
+
+export { default as AtomicTitle } from './atomic-title';

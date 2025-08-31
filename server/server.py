@@ -14,7 +14,7 @@ from model.xai import explain_prediction_ensemble
 from model.predict import predict_game_success
 
 BASE_DIR = Path(__file__).resolve().parent
-ARTIFACTS_DIR = BASE_DIR / "model" / "artifacts"
+ARTIFACTS_DIR = BASE_DIR / "model" / "artifacts_ensemble"
 ARTIFACTS_DIR_ENSEMBLE = BASE_DIR / "model" / "artifacts_ensemble"
 
 # ===== Toggle (hardcoded or env var) =====

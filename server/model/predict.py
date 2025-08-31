@@ -230,7 +230,7 @@ def _predict_ensemble(
 # ------------------------------
 def predict_game_success(
     user_input: Dict,
-    model_or_models,  # either single estimator OR dict of per-target models
+    model_or_models,
     features_used: List[str],
     *,
     use_new_pipeline: bool = None,

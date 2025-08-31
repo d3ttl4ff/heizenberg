@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 
 const logo = '/images/HELOGO5.png';
-const logoM = '/images/ML2.png';
+const logoM = '/images/ML3.png';
 
 function Hero() {
   return (

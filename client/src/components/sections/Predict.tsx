@@ -5,6 +5,7 @@ import { ca, enUS } from 'date-fns/locale';
 
 import {
   ChevronDownIcon,
+  ChevronUpIcon,
   AlertCircleIcon,
   PaperclipIcon,
   UploadIcon,
@@ -74,7 +75,6 @@ const fmtNum = (n: number) => n.toLocaleString();
 const pctErr = (pred: number, actual: number) => {
   if (!isFinite(pred) || !isFinite(actual) || actual === 0) return '—';
   const pct = ((pred - actual) / actual) * 100;
-  // round to a believable whole number; switch to 1 decimal if you prefer
   return `${Math.abs(pct).toFixed(2)}%`;
 };
 const pctAcc = (pred: number, actual: number) => {
@@ -129,8 +129,8 @@ function ContributionsList({ items }: { items: FeatureContribution[] }) {
       {items.map((c) => (
         <div key={c.feature} className="grid grid-cols-12 gap-3 items-center">
           <div className="col-span-4 truncate">
-            <span className="text-sm">{c.feature}</span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-sm text-white">{c.feature}</span>
+            <span className="text-xs text-accent-mist">
               {' '}
               • {prettyVal(c.value)}
             </span>
@@ -138,9 +138,14 @@ function ContributionsList({ items }: { items: FeatureContribution[] }) {
           <div className="col-span-6">
             <Bar value={c.contrib_normal} max={maxAbs} />
           </div>
-          <div className="col-span-2 text-right text-xs tabular-nums">
+          <div className="col-span-2 text-white text-right text-xs tabular-nums">
             {c.contrib_normal >= 0 ? '+' : ''}
             {c.contrib_normal.toFixed(2)}
+            {c.contrib_normal >= 0 ? (
+              <ChevronUpIcon className="inline-block ml-0.5 w-3 text-emerald-400" />
+            ) : (
+              <ChevronDownIcon className="inline-block ml-0.5 w-3 text-rose-400" />
+            )}
           </div>
         </div>
       ))}
@@ -150,12 +155,6 @@ function ContributionsList({ items }: { items: FeatureContribution[] }) {
 
 const Predict = () => {
   const id = useId();
-
-  const [dropdown, setDropdown] =
-    React.useState<React.ComponentProps<typeof Calendar>['captionLayout']>(
-      'dropdown'
-    );
-  const [date, setDate] = React.useState<Date | undefined>(new Date());
 
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
@@ -208,14 +207,6 @@ const Predict = () => {
     setForm((f) => ({ ...f, [key]: val }));
   }
 
-  function onMultiChange(
-    e: React.ChangeEvent<HTMLSelectElement>,
-    setter: (vals: string[]) => void
-  ) {
-    const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
-    setter(selected);
-  }
-
   // derive selected options from form booleans
   const selectedPlatformOptions: Option[] = PLATFORMS.filter(
     (o) => !!form[o.value]
@@ -245,7 +236,7 @@ const Predict = () => {
   function handleCategoriesChange(opts: { label: string; value: string }[]) {
     const values = opts.map((o) => o.value);
     setCategories(values);
-    update('categories', values); // keep in sync with form
+    update('categories', values);
   }
 
   function buildPayload() {
@@ -288,10 +279,9 @@ const Predict = () => {
     copiesSold: number;
     revenue: number;
   }>(null);
-  const [calibrated, setCalibrated] = useState<typeof actual>(null);
 
   // ---------- JSON upload helpers ----------
-  const maxSize = 5 * 1024 * 1024; // 5MB
+  const maxSize = 100 * 1024 * 1024;
   const [
     { files, isDragging, errors },
     {
@@ -346,16 +336,8 @@ const Predict = () => {
     };
   }, [file]);
 
-  function sanitizeNameToFeature(s: string) {
-    // Make dataset dev/pub names match your constants' "dev__Square_Enix" style
-    return s
-      .replace(/[^A-Za-z0-9]+/g, '_') // non-alnum -> _
-      .replace(/^_+|_+$/g, '') // trim _
-      .replace(/_{2,}/g, '_'); // collapse __
-  }
-
   function normalizeFlagKey(k: string) {
-    // "Single-player" -> "Single_player", "Free To Play" -> "Free_To_Play"
+    // "Single-player" -> "Single_player"
     return k.replace(/[\/\-\s]/g, '_');
   }
 
@@ -364,31 +346,31 @@ const Predict = () => {
     return Math.min(3, Math.max(0, isNaN(v) ? 0 : v));
   }
 
-  // Build the exact payload you already POST
-  function buildPayloadFromState() {
-    const payload: Record<string, any> = {
-      price: Number(form.price) || 0,
-      is_free: Boolean(form.is_free),
-      required_age: Number(form.required_age),
-      achievements: Number(form.achievements) || 0,
-      english: Boolean(form.english),
-      windows: Boolean(form.windows),
-      mac: Boolean(form.mac),
-      linux: Boolean(form.linux),
-      release_date: form.release_date,
-      extract_date: form.extract_date,
-      publisherClass_encoded: clampPubClass(form.publisherClass_encoded),
-    };
+  // // Build the exact payload you already POST
+  // function buildPayloadFromState() {
+  //   const payload: Record<string, any> = {
+  //     price: Number(form.price) || 0,
+  //     is_free: Boolean(form.is_free),
+  //     required_age: Number(form.required_age),
+  //     achievements: Number(form.achievements) || 0,
+  //     english: Boolean(form.english),
+  //     windows: Boolean(form.windows),
+  //     mac: Boolean(form.mac),
+  //     linux: Boolean(form.linux),
+  //     release_date: form.release_date,
+  //     extract_date: form.extract_date,
+  //     publisherClass_encoded: clampPubClass(form.publisherClass_encoded),
+  //   };
 
-    for (const opt of GENRES) {
-      payload[opt.value] = genres.includes(opt.value);
-    }
-    for (const opt of CATEGORIES) {
-      payload[opt.value] = categories.includes(opt.value);
-    }
+  //   for (const opt of GENRES) {
+  //     payload[opt.value] = genres.includes(opt.value);
+  //   }
+  //   for (const opt of CATEGORIES) {
+  //     payload[opt.value] = categories.includes(opt.value);
+  //   }
 
-    return payload;
-  }
+  //   return payload;
+  // }
 
   // Apply a "payload-style" JSON object (the one you POST)
   function applyFromPayload(obj: any) {
@@ -482,94 +464,9 @@ const Predict = () => {
     });
   }
 
-  // Calibrate the actual values to have random reduction of 10-30% or increase of 5-15%
-  // --- deterministic helpers ---
-  function fnv1a32(str: string): number {
-    // simple fast 32-bit hash
-    let h = 0x811c9dc5;
-    for (let i = 0; i < str.length; i++) {
-      h ^= str.charCodeAt(i);
-      h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
-    }
-    // ensure uint32
-    return h >>> 0;
-  }
-
-  function mulberry32(seed: number) {
-    let t = seed >>> 0;
-    return function () {
-      t += 0x6d2b79f5;
-      let r = Math.imul(t ^ (t >>> 15), 1 | t);
-      r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
-      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-
-  function getSeedFromObject(o: any): number {
-    // prefer steamid if present; otherwise hash a stable subset
-    const steamid = (o?.steamid ?? o?.dataset_entry?.steamid ?? null) as
-      | number
-      | null;
-    if (typeof steamid === 'number' && isFinite(steamid)) {
-      return steamid >>> 0 || 1;
-    }
-    // fallback: hash of stringified dataset_entry or the object
-    const toHash = JSON.stringify(o?.dataset_entry ?? o);
-    return fnv1a32(toHash) || 1;
-  }
-
-  const [seed, setSeed] = useState<number | null>(null);
-  const calibrationCache = React.useRef<
-    Map<
-      number,
-      { owners: number; players: number; copiesSold: number; revenue: number }
-    >
-  >(new Map());
-
-  function calibrateActualValues() {
-    if (!actual || !seed) return;
-
-    // reuse from cache if already computed for this seed/game
-    const cached = calibrationCache.current.get(seed);
-    if (cached) {
-      setCalibrated(cached);
-      return;
-    }
-
-    const rng = mulberry32(seed);
-
-    const getRandomReduction = () => rng() * 0.22 + 0.1; // 10–32%
-    const getRandomIncrease = () => rng() * 0.1 + 0.05; // 5–15%
-
-    // choose reduction/increase threshold deterministically
-    const threshold = rng(); // 0–1, but now seeded
-
-    const calibrate = (value: number) => {
-      const roll = rng();
-      if (roll < threshold) {
-        return Math.round(value * (1 - getRandomReduction()));
-      } else {
-        return Math.round(value * (1 + getRandomIncrease()));
-      }
-    };
-
-    const result = {
-      owners: calibrate(actual.owners),
-      players: calibrate(actual.players),
-      copiesSold: calibrate(actual.copiesSold),
-      revenue: calibrate(actual.revenue),
-    };
-
-    calibrationCache.current.set(seed, result);
-    setCalibrated(result);
-  }
-
   // Decide which shape we received
   function applyUploadedObject(obj: any) {
     if (!obj || typeof obj !== 'object') return;
-
-    const newSeed = getSeedFromObject(obj);
-    setSeed(newSeed);
 
     if (
       'dataset_entry' in obj &&
@@ -643,13 +540,8 @@ const Predict = () => {
         setExplaining(false);
       }
 
-      // Download exactly what you sent
+      // Download the payload
       // downloadJSON(`payload-${Date.now()}.json`, payload);
-      if (actual) {
-        calibrateActualValues();
-      } else {
-        setCalibrated(null);
-      }
 
       setSubmitted(true);
     } catch (e: any) {
@@ -660,13 +552,6 @@ const Predict = () => {
       setLoading(false);
     }
   }
-
-  // at component level
-  // React.useEffect(() => {
-  //   if (actual && seed) {
-  //     calibrateActualValues();
-  //   }
-  // }, [actual, seed]);
 
   return (
     <div
@@ -1082,105 +967,30 @@ const Predict = () => {
           </div>
         </div>
 
-        <button
-          onClick={onSubmit}
-          disabled={loading}
-          className="rounded-md px-4 py-2 bg-accent-nvidia text-sm font-bold text-black/80 border border-white/5 cursor-pointer hover:bg-accent-nvidia-dim transition-all active:scale-95"
-        >
-          {loading ? 'Foreseeing...' : 'Foresee Your Game Sucess Now'}
-        </button>
+        <div className="flex gap-2 justify-center items-center flex-wrap w-full">
+          <button
+            onClick={onSubmit}
+            disabled={loading}
+            className="rounded-md px-4 py-2 bg-accent-nvidia text-sm font-bold text-black/80 border border-white/5 cursor-pointer hover:bg-accent-nvidia-dim transition-all active:scale-95 sm:w-fit w-full"
+          >
+            {loading ? 'Foreseeing...' : 'Foresee Your Game Sucess Now'}
+          </button>
 
-        {/* <button
-          type="button"
-          onClick={() =>
-            downloadJSON(`payload-${Date.now()}.json`, buildPayload())
-          }
-          className="rounded-md px-4 py-2 bg-accent-fog text-accent-charcol font-semibold shadow disabled:opacity-50 hover:bg-accent-mist transition-all duration-100"
-        >
-          Download JSON
-        </button> */}
+          <button
+            type="button"
+            onClick={() =>
+              downloadJSON(`payload-${Date.now()}.json`, buildPayload())
+            }
+            className="rounded-md px-4 py-2 bg-accent-fog font-semibold shadow disabled:opacity-50 hover:bg-accent-fog/70 transition-all duration-100 sm:w-fit w-full"
+          >
+            Download Payload
+          </button>
+        </div>
 
         {error && <div className="text-red-600">{error}</div>}
       </div>
 
-      {/* {(pred || calibrated) && (
-        <div className="mt-6 w-full max-w-3xl">
-          <h2 className="text-lg font-medium mb-2">Prediction</h2>
-
-          <div className="flex flex-col gap-2">
-            {(() => {
-              const display = calibrated ?? pred!;
-              return (
-                <>
-                  <span className="block h-px w-full bg-gradient-to-r from-white via-white/50 to-transparent" />
-
-                  <div className="flex justify-between">
-                    <div className="flex gap-2">
-                      <Badge variant="default" className="gap-1.5">
-                        <span
-                          className="size-1.5 rounded-full bg-accent-nvidia"
-                          aria-hidden="true"
-                        ></span>
-                      </Badge>
-                      <span>Owners</span>
-                    </div>
-                    <span>{display.owners.toLocaleString()}</span>
-                  </div>
-
-                  <span className="block h-px w-full bg-gradient-to-r from-white via-white/50 to-transparent" />
-
-                  <div className="flex justify-between">
-                    <div className="flex gap-2">
-                      <Badge variant="default" className="gap-1.5">
-                        <span
-                          className="size-1.5 rounded-full bg-blue-500"
-                          aria-hidden="true"
-                        ></span>
-                      </Badge>
-                      <span>Players</span>
-                    </div>
-                    <span>{display.players.toLocaleString()}</span>
-                  </div>
-
-                  <span className="block h-px w-full bg-gradient-to-r from-white via-white/50 to-transparent" />
-
-                  <div className="flex justify-between">
-                    <div className="flex gap-2">
-                      <Badge variant="default" className="gap-1.5">
-                        <span
-                          className="size-1.5 rounded-full bg-rose-500"
-                          aria-hidden="true"
-                        ></span>
-                      </Badge>
-                      <span>Copies Sold</span>
-                    </div>
-                    <span>{display.copiesSold.toLocaleString()}</span>
-                  </div>
-
-                  <span className="block h-px w-full bg-gradient-to-r from-white via-white/50 to-transparent" />
-
-                  <div className="flex justify-between">
-                    <div className="flex gap-2">
-                      <Badge variant="default" className="gap-1.5">
-                        <span
-                          className="size-1.5 rounded-full bg-yellow-600"
-                          aria-hidden="true"
-                        ></span>
-                      </Badge>
-                      <span>Revenue</span>
-                    </div>
-                    <span>${display.revenue.toLocaleString()}</span>
-                  </div>
-
-                  <span className="block h-px w-full bg-gradient-to-r from-white via-white/50 to-transparent" />
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      )} */}
-
-      {(pred || calibrated) && (
+      {pred && (
         <div className="mt-6 w-full max-w-3xl">
           <h2 className="text-lg font-medium mb-2">Prediction</h2>
 
@@ -1191,11 +1001,6 @@ const Predict = () => {
             {(() => {
               // decide display source per metric; default to model pred
               const hasActual = Boolean(actual);
-
-              // const ownersVal = calibrated?.owners ?? pred?.owners ?? 0;
-              // const playersVal = calibrated?.players ?? pred?.players ?? 0;
-              // const copiesVal = calibrated?.copiesSold ?? pred?.copiesSold ?? 0;
-              // const revenueVal = calibrated?.revenue ?? pred?.revenue ?? 0;
 
               const ownersVal = pred?.owners ?? 0;
               const playersVal = pred?.players ?? 0;
@@ -1357,18 +1162,102 @@ const Predict = () => {
       {xai && (
         <div className="mt-8 w-full max-w-3xl">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-medium">Why did we predict this?</h2>
+            {!explaining && (
+              <h2 className="text-lg font-medium">Why did we predict this?</h2>
+            )}
             {explaining && (
-              <span className="text-xs text-muted-foreground">
-                computing explanations…
+              <span className="text-md text-accent-nvidia">
+                Computing Explanations…
               </span>
             )}
           </div>
+
           {explainError && (
             <div className="text-destructive text-sm mb-3">{explainError}</div>
           )}
 
-          <div className="space-y-6">
+          {!explaining && (
+            <div className="text-sm text-muted-foreground">
+              <div className="space-y-6">
+                <div className="rounded-lg border border-accent-fog p-4">
+                  <div className="flex items-center gap-1 mb-2">
+                    <Badge
+                      variant="default"
+                      className="px-4 py-1 gap-2 bg-accent-nvidia rounded-md rounded-r-none"
+                    >
+                      <span className="font-semibold text-black">Owners</span>
+                    </Badge>
+                    <Badge
+                      variant="default"
+                      className="px-4 py-1 bg-accent-nvidia/20 rounded-l-none"
+                    >
+                      <span className="font-semibold">Top Drivers</span>
+                    </Badge>
+                  </div>
+
+                  <ContributionsList items={xai.owners} />
+                </div>
+
+                <div className="rounded-lg border border-accent-fog p-4">
+                  <div className="flex items-center gap-1 mb-2">
+                    <Badge
+                      variant="default"
+                      className="px-4 py-1 gap-2 bg-blue-600 rounded-md rounded-r-none"
+                    >
+                      <span className="font-semibold text-black">Players</span>
+                    </Badge>
+                    <Badge
+                      variant="default"
+                      className="px-4 py-1 bg-blue-600/20 rounded-l-none"
+                    >
+                      <span className="font-semibold">Top Drivers</span>
+                    </Badge>
+                  </div>
+                  <ContributionsList items={xai.players} />
+                </div>
+
+                <div className="rounded-lg border border-accent-fog p-4">
+                  <div className="flex items-center gap-1 mb-2">
+                    <Badge
+                      variant="default"
+                      className="px-4 py-1 gap-2 bg-rose-600 rounded-md rounded-r-none"
+                    >
+                      <span className="font-semibold text-black">
+                        Copies Sold
+                      </span>
+                    </Badge>
+                    <Badge
+                      variant="default"
+                      className="px-4 py-1 bg-rose-600/20 rounded-l-none"
+                    >
+                      <span className="font-semibold">Top Drivers</span>
+                    </Badge>
+                  </div>
+                  <ContributionsList items={xai.copiesSold} />
+                </div>
+
+                <div className="rounded-lg border border-accent-fog p-4">
+                  <div className="flex items-center gap-1 mb-2">
+                    <Badge
+                      variant="default"
+                      className="px-4 py-1 gap-2 bg-yellow-500 rounded-md rounded-r-none"
+                    >
+                      <span className="font-semibold text-black">Revenue</span>
+                    </Badge>
+                    <Badge
+                      variant="default"
+                      className="px-4 py-1 bg-yellow-600/20 rounded-l-none"
+                    >
+                      <span className="font-semibold">Top Drivers</span>
+                    </Badge>
+                  </div>
+                  <ContributionsList items={xai.revenue} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* <div className="space-y-6">
             <div className="rounded-lg border border-accent-fog p-4">
               <div className="flex items-center gap-1 mb-2">
                 <Badge
@@ -1441,7 +1330,7 @@ const Predict = () => {
               </div>
               <ContributionsList items={xai.revenue} />
             </div>
-          </div>
+          </div> */}
         </div>
       )}
     </div>
